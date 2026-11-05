@@ -80,6 +80,10 @@ tr.clic { cursor: pointer; } tr.clic:hover td { background: var(--fondo); }
 .subir { border: 2px dashed var(--borde); border-radius: 10px; padding: 28px; text-align: center; background: var(--fondo); }
 .subir.sobre { border-color: var(--naranjo); background: var(--naranjo-claro); }
 .vacio { color: var(--suave); padding: 40px; text-align: center; }
+td.regla { text-decoration: underline dotted var(--suave); text-underline-offset: 3px; cursor: help; }
+.chip.ACTIVA { background: var(--ok-claro); color: var(--ok); }
+.chip.PARCIAL { background: var(--amar); color: #8a6100; }
+dialog.ancho { width: min(1000px, calc(100vw - 32px)); }
 .cargando::after { content: ' ⏳'; }
 
 /* modal */
@@ -135,6 +139,7 @@ dialog h2 { margin-bottom: 4px; }
   <header>
     <h1>Prefactura <span>·</span> Newtrans</h1>
     <div class="yo"><span id="yo-nombre"></span><small id="yo-rol"></small></div>
+    <button id="b-maestro" class="peq">Maestro de reglas</button>
     <button id="b-salir" class="peq">Salir</button>
   </header>
   <main>

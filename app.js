@@ -79,6 +79,29 @@ $('#f-clave').onsubmit = async (e) => {
   entrar();
 };
 $('#b-salir').onclick = () => sb.auth.signOut();
+$('#b-maestro').onclick = () => {
+  $('#d-info').classList.add('ancho');
+  modal(`<h2>Maestro de reglas del sistema</h2><p class="aviso">Las aplica el motor a todos los clientes. Las reglas propias de cada cliente
+    (ej. TEC-01) se ven en su pestaña “Reglas del cliente”.</p>` + tabla(['Id', 'Regla', 'Qué revisa', 'Qué hace', 'Estado'],
+    est.rs.map((r) => `<tr><td class="mono"><b>${esc(r.id)}</b></td><td>${esc(r.nombre)}</td><td>${esc(r.logica)}</td>
+      <td>${esc(r.accion)}</td><td><span class="chip ${esc(r.estado)}">${esc(r.estado)}</span></td></tr>`)));
+  $('#d-info').addEventListener('close', () => $('#d-info').classList.remove('ancho'), { once: true });
+};
+
+/** Texto de ayuda para una etiqueta de regla del motor ("R03 Tarifa", "TEC-01 MEDIDAS", "CLM-03+CLM-05 EXTRA"). */
+function explicar(etiqueta) {
+  const id = /^R\d\d/.exec(etiqueta)?.[0];
+  if (id) {
+    const r = est.rs.find((x) => x.id === id);
+    return r ? `${r.id} ${r.nombre}: ${r.logica} → ${r.accion}` : etiqueta;
+  }
+  if (etiqueta === 'EXIMIR') return 'Regla del cliente tipo EXIMIR: transporte en $0.';
+  const usadas = [...(est.lote?.l.reglas_usadas?.vigentes ?? []), ...(est.lote?.l.reglas_usadas?.propuestas ?? [])];
+  return etiqueta.split(' ')[0].split('+').map((c) => {
+    const g = usadas.find((x) => x.codigo === c);
+    return g ? `${c} (regla del cliente): ${parametros(g)}. Acuerdo: ${g.nota}` : c;
+  }).join('\n');
+}
 
 async function entrar() {
   const { data: { user } } = await sb.auth.getUser();
@@ -94,6 +117,7 @@ async function entrar() {
   vista('v-app');
   const { data } = await sb.from('clientes').select('rut, razon_social, ejecutivo_erp').order('razon_social');
   est.clientes = data ?? [];
+  est.rs = (await sb.from('reglas_sistema').select('*').order('id')).data ?? [];
   pintarCartera();
 }
 
@@ -243,12 +267,12 @@ function pintarLote(sub) {
     $('#sub').innerHTML = aj.length ? corto(aj.length) + tabla(['OS', 'Campo', 'Valor ERP', 'Valor corregido', 'Diferencia', 'Regla'],
       aj.slice(0, MAX_FILAS).map((a) => `<tr><td class="mono">${esc(a.os)}</td><td>${esc(a.campo)}</td><td class="n">${num(a.valor_erp)}</td>
         <td class="n">${num(a.valor_corregido)}</td><td class="n ${signo(a.valor_corregido - a.valor_erp)}">${num(a.valor_corregido - a.valor_erp)}</td>
-        <td>${esc(a.regla)}</td></tr>`)) : '<div class="vacio">Sin ajustes: el archivo coincide con las tarifas.</div>';
+        <td class="regla" title="${esc(explicar(a.regla))}">${esc(a.regla)}</td></tr>`)) : '<div class="vacio">Sin ajustes: el archivo coincide con las tarifas.</div>';
   } else if (sub === 'observadas') {
     const editable = l.estado === 'PROCESADO';
     $('#sub').innerHTML = ob.length ? `<p class="aviso">Casos que el sistema no corrige y requieren revisión manual.${editable ? ' Anota cómo se resolvió cada uno; se guarda al salir del campo.' : ''}</p>`
       + corto(ob.length) + tabla(['OS', 'Regla', 'Detalle', 'Resolución'],
-      ob.slice(0, MAX_FILAS).map((o) => `<tr><td class="mono">${esc(o.os)}</td><td>${esc(o.regla)}</td><td>${esc(o.detalle)}</td>
+      ob.slice(0, MAX_FILAS).map((o) => `<tr><td class="mono">${esc(o.os)}</td><td class="regla" title="${esc(explicar(o.regla))}">${esc(o.regla)}</td><td>${esc(o.detalle)}</td>
         <td>${editable ? `<input data-obs="${o.id}" value="${esc(o.resolucion)}" placeholder="Pendiente">` : esc(o.resolucion ?? '—')}</td></tr>`))
       : '<div class="vacio">Sin observaciones.</div>';
     $('#sub').onchange = async (e) => {
@@ -338,6 +362,8 @@ async function excelInforme({ l, aj, ob, pendientes }) {
   const cr = ['codigo', 'tipo', 'estado', 'servicio', 'via', 'desde', 'hasta', 'palabra', 'excluir', 'largo', 'ancho', 'alto',
     'modo', 'condicion', 'valor', 'valor_txt', 'min_neto', 'max_neto', 'nota', 'aprobado_en'];
   hoja(wb, 'Reglas del cliente', [cr.map((c) => c.toUpperCase()), ...[...vig, ...prop].map((g) => cr.map((c) => g[c] ?? null))]);
+  hoja(wb, 'Maestro de reglas', [['Id', 'Regla', 'Qué revisa', 'Qué hace el sistema', 'Estado'],
+    ...est.rs.map((r) => [r.id, r.nombre, r.logica, r.accion, r.estado])]);
   XLSX.writeFile(wb, nombreArchivo('Informe_correcciones'));
 }
 
