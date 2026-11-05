@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prefactura · Newtrans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --azul: #1f4e79; --azul-2: #2f6aa3; --azul-claro: #e8f0f8; --naranjo: #e8772e; --naranjo-claro: #fdf0e6;
+  --fondo: #f4f6f9; --panel: #fff; --borde: #dde3ea; --texto: #1d2733; --suave: #5d6b7a;
+  --ok: #2e7d4f; --ok-claro: #e6f4ec; --mal: #b3261e; --mal-claro: #fbe9e7; --amar: #fff6d6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 'IBM Plex Sans', system-ui, sans-serif; color: var(--texto); background: var(--fondo); }
+.mono, td.n, .kpi b { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+h1, h2, h3 { margin: 0; font-weight: 600; }
+h2 { font-size: 18px; } h3 { font-size: 15px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--borde); background: #fff; border-radius: 6px; padding: 7px 12px; }
+button:hover { border-color: var(--azul-2); }
+button.prim { background: var(--azul); color: #fff; border-color: var(--azul); }
+button.prim:hover { background: var(--azul-2); }
+button.nar { background: var(--naranjo); color: #fff; border-color: var(--naranjo); }
+button.peq { padding: 3px 8px; font-size: 12px; }
+button:disabled { opacity: .5; cursor: default; }
+input, select, textarea { border: 1px solid var(--borde); border-radius: 6px; padding: 7px 9px; background: #fff; width: 100%; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--azul-2); outline-offset: 1px; }
+label { display: block; font-size: 12px; color: var(--suave); margin-bottom: 3px; font-weight: 500; }
+.oculto { display: none !important; }
+.error { color: var(--mal); background: var(--mal-claro); border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+.aviso { color: var(--suave); font-size: 13px; }
+
+/* acceso */
+.acceso { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 28px; width: 100%; max-width: 380px; }
+.tarjeta h1 { color: var(--azul); font-size: 20px; } .tarjeta h1 span { color: var(--naranjo); }
+.tarjeta form > div { margin-top: 14px; }
+.tarjeta button { width: 100%; margin-top: 18px; }
+.enlace { background: none; border: 0; color: var(--azul-2); padding: 0; text-decoration: underline; }
+
+/* aplicación */
+header { background: var(--azul); color: #fff; display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 3px solid var(--naranjo); }
+header h1 { font-size: 17px; } header h1 span { color: #ffc89e; }
+header .yo { margin-left: auto; font-size: 13px; text-align: right; }
+header .yo small { display: block; opacity: .75; }
+header button { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+main { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; max-width: 1500px; margin: 0 auto; }
+aside, section.panel { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; }
+aside { padding: 12px; align-self: start; position: sticky; top: 12px; max-height: calc(100vh - 90px); display: flex; flex-direction: column; }
+aside ul { list-style: none; margin: 10px 0 0; padding: 0; overflow: auto; }
+aside li button { width: 100%; text-align: left; border: 0; border-radius: 6px; padding: 7px 9px; display: block; }
+aside li button:hover { background: var(--azul-claro); }
+aside li button.activo { background: var(--azul); color: #fff; }
+aside li small { display: block; font-size: 11px; opacity: .7; }
+section.panel { padding: 18px 20px; min-width: 0; }
+.cab { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.cab .acciones { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--borde); margin: 16px 0; }
+.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 8px 12px; background: none; color: var(--suave); }
+.tabs button.activo { color: var(--azul); border-bottom-color: var(--naranjo); font-weight: 600; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 12px 0; }
+.kpi { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; }
+.kpi > span { display: block; font-size: 12px; color: var(--suave); }
+.kpi b { font-size: 18px; font-weight: 500; }
+.kpi.dest { border-color: var(--naranjo); background: var(--naranjo-claro); }
+.tabla { overflow: auto; border: 1px solid var(--borde); border-radius: 8px; max-height: 60vh; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { position: sticky; top: 0; background: var(--azul-claro); color: var(--azul); text-align: left; font-weight: 600; padding: 7px 9px; white-space: nowrap; }
+td { padding: 6px 9px; border-top: 1px solid var(--borde); vertical-align: top; }
+td.n, td.mono { text-align: right; white-space: nowrap; }
+td.mono { text-align: left; }
+tr.clic { cursor: pointer; } tr.clic:hover td { background: var(--fondo); }
+.pos { color: var(--ok); } .neg { color: var(--mal); }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--fondo); color: var(--suave); }
+.chip.VIGENTE, .chip.CERRADO { background: var(--ok-claro); color: var(--ok); }
+.chip.PROPUESTA, .chip.PROCESADO { background: var(--amar); color: #8a6100; }
+.chip.RECHAZADA, .chip.ANULADO { background: var(--mal-claro); color: var(--mal); }
+.subir { border: 2px dashed var(--borde); border-radius: 10px; padding: 28px; text-align: center; background: var(--fondo); }
+.subir.sobre { border-color: var(--naranjo); background: var(--naranjo-claro); }
+.vacio { color: var(--suave); padding: 40px; text-align: center; }
+.cargando::after { content: ' ⏳'; }
+
+/* modal */
+dialog { border: 0; border-radius: 12px; padding: 0; width: min(720px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop { background: rgba(20,30,45,.45); }
+dialog form, dialog .cuerpo { padding: 20px 22px; }
+dialog h2 { margin-bottom: 4px; }
+.rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+.rejilla .ancho { grid-column: 1 / -1; }
+.pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.ayuda { background: var(--azul-claro); color: var(--azul); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 10px; }
+
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; padding: 16px; }
+  aside { position: static; max-height: 280px; }
+  .rejilla { grid-template-columns: 1fr 1fr; }
+  header { padding: 10px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- acceso -->
+<div id="v-login" class="acceso oculto">
+  <div class="tarjeta">
+    <h1>Prefactura <span>·</span> Newtrans</h1>
+    <p class="aviso">Ingresa con tu correo corporativo.</p>
+    <form id="f-login">
+      <div><label for="l-correo">Correo</label><input id="l-correo" type="email" autocomplete="username" required></div>
+      <div><label for="l-clave">Contraseña</label><input id="l-clave" type="password" autocomplete="current-password" required></div>
+      <div id="l-error" class="error oculto"></div>
+      <button class="prim" type="submit">Entrar</button>
+    </form>
+    <p class="aviso" style="margin-top:14px"><button class="enlace" id="b-olvide" type="button">¿Olvidaste tu contraseña?</button></p>
+  </div>
+</div>
+
+<div id="v-clave" class="acceso oculto">
+  <div class="tarjeta">
+    <h1>Crea tu contraseña</h1>
+    <p class="aviso">Mínimo 10 caracteres. La usarás para entrar a la plataforma.</p>
+    <form id="f-clave">
+      <div><label for="c-1">Nueva contraseña</label><input id="c-1" type="password" minlength="10" autocomplete="new-password" required></div>
+      <div><label for="c-2">Repite la contraseña</label><input id="c-2" type="password" minlength="10" autocomplete="new-password" required></div>
+      <div id="c-error" class="error oculto"></div>
+      <button class="prim" type="submit">Guardar y entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- aplicación -->
+<div id="v-app" class="oculto">
+  <header>
+    <h1>Prefactura <span>·</span> Newtrans</h1>
+    <div class="yo"><span id="yo-nombre"></span><small id="yo-rol"></small></div>
+    <button id="b-salir" class="peq">Salir</button>
+  </header>
+  <main>
+    <aside>
+      <label for="buscar">Mi cartera</label>
+      <input id="buscar" type="search" placeholder="Buscar cliente o RUT">
+      <ul id="clientes"></ul>
+    </aside>
+    <section class="panel" id="panel"><div class="vacio">Selecciona un cliente de tu cartera.</div></section>
+  </main>
+</div>
+
+<!-- modal de regla -->
+<dialog id="d-regla">
+  <form id="f-regla" method="dialog">
+    <h2>Nueva regla</h2>
+    <p class="aviso" id="r-cliente"></p>
+    <div class="rejilla">
+      <div><label for="r-tipo">Tipo</label>
+        <select id="r-tipo" required>
+          <option value="MEDIDAS">Medidas</option><option value="PESO">Peso cobrable</option>
+          <option value="SERVICIO">Servicio</option><option value="DESCUENTO">Descuento</option>
+          <option value="RECARGO">Recargo de comuna</option><option value="CARGO_FIJO">Cargo fijo</option>
+          <option value="COMBUSTIBLE">Combustible</option><option value="EXIMIR">Eximir</option>
+        </select></div>
+      <div><label for="r-desde">Vigente desde</label><input id="r-desde" type="date"></div>
+      <div><label for="r-hasta">Vigente hasta</label><input id="r-hasta" type="date"></div>
+      <div class="ancho ayuda" id="r-ayuda"></div>
+      <div data-c="servicio"><label for="r-servicio" id="r-servicio-l">Servicio (filtro)</label><input id="r-servicio" placeholder="vacío = todos"></div>
+      <div data-c="via"><label for="r-via">Vía</label>
+        <select id="r-via"><option value="">Todas</option><option>TERRESTRE</option><option value="AEREA">AÉREA</option></select></div>
+      <div data-c="palabra"><label for="r-palabra" id="r-palabra-l">Palabras en descripción</label><input id="r-palabra" placeholder="JERINGA1CC|JERINGA0.5"></div>
+      <div data-c="excluir"><label for="r-excluir">Excluir si contiene</label><input id="r-excluir"></div>
+      <div data-c="largo"><label for="r-largo">Largo cm</label><input id="r-largo" type="number" min="0" step="any"></div>
+      <div data-c="ancho"><label for="r-ancho">Ancho cm</label><input id="r-ancho" type="number" min="0" step="any"></div>
+      <div data-c="alto"><label for="r-alto">Alto cm</label><input id="r-alto" type="number" min="0" step="any"></div>
+      <div data-c="modo"><label for="r-modo">Aplicar</label><select id="r-modo"></select></div>
+      <div data-c="condicion"><label for="r-condicion">Condición</label>
+        <select id="r-condicion"><option value="SIEMPRE">Siempre</option><option value="SOLO_SI_BAJA">Solo si baja el KG.V</option></select></div>
+      <div data-c="valor"><label for="r-valor" id="r-valor-l">Valor</label><input id="r-valor" type="number" step="any"></div>
+      <div data-c="valor_txt"><label for="r-valor_txt" id="r-valor_txt-l">Valor</label><input id="r-valor_txt" list="r-pesos"></div>
+      <datalist id="r-pesos"><option>FISICO</option><option>VOLUMETRICO</option><option>AMBOS</option></datalist>
+      <div data-c="min_neto"><label for="r-min_neto">Transporte total desde $</label><input id="r-min_neto" type="number" min="0"></div>
+      <div data-c="max_neto"><label for="r-max_neto">Transporte total hasta $</label><input id="r-max_neto" type="number" min="0"></div>
+      <div class="ancho"><label for="r-nota">Acuerdo que respalda la regla</label><textarea id="r-nota" rows="2" required placeholder="Ej.: Anexo D tarifa 2026, correo del cliente del 12-10-2026"></textarea></div>
+      <div class="ancho"><label for="r-respaldo">Respaldo (correo, contrato o tarifa) — obligatorio para aprobar</label><input id="r-respaldo" type="file"></div>
+    </div>
+    <div id="r-error" class="error oculto"></div>
+    <div class="pie">
+      <button type="button" id="r-cancelar">Cancelar</button>
+      <button type="submit" class="prim">Guardar como propuesta</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="d-info"><div class="cuerpo"><div id="i-contenido"></div><div class="pie"><button id="i-cerrar" class="prim">Cerrar</button></div></div></dialog>
+<input type="file" id="f-respaldo-aprobar" class="oculto">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
