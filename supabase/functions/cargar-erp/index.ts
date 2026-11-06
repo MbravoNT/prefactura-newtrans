@@ -8,6 +8,7 @@ const TABLA: Record<string, string> = {
   CONTRATOS: "erp_contratos",
   TARIFAS: "erp_tarifas",
   SERVICIOS: "erp_servicios",
+  SORTER: "erp_sorter",
 };
 
 Deno.serve(async (req) => {

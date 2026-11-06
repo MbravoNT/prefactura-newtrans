@@ -59,4 +59,32 @@ for (const caso of ['tecnika', 'clinical']) {
   comparar('propuestas detalle', ref.propuestas_detalle, r.detalle, Object.keys(ref.propuestas_detalle[0] ?? {}));
 }
 console.log(fallas ? `\nREGRESIÓN FALLA: ${fallas} diferencias` : '\nREGRESIÓN OK: motor TS idéntico a motor.py');
-process.exit(fallas ? 1 : 0);
+process.exitCode = fallas ? 1 : 0;
+
+// ---------------------------------------------------------------- R01 Sorter (no existe en motor.py: se prueba aparte)
+import { existsSync } from 'node:fs';
+if (existsSync(join(dir, 'carga_erp/sorter.json'))) {
+  const sorter = new Map<string, { largo: number; ancho: number; alto: number }[]>();
+  for (const b of filas('sorter')) {
+    if (!sorter.has(b.os)) sorter.set(b.os, []);
+    sorter.get(b.os)!.push({ largo: b.largo, ancho: b.ancho, alto: b.alto });
+  }
+  console.log('\nR01 Sorter:');
+  for (const [caso, csv] of [['tecnika', 'Tecnika/O_S_SIN_FACTURAR_28OCT2026.csv'], ['clinical', 'Clinical Market/O_S_SIN_FACTURAR_29OCT2026.csv']]) {
+    const base = leerCsv(readFileSync(join(dir, csv), 'utf8'));
+    const sin = procesar(base, erp, reglas), con = procesar(base, { ...erp, sorter }, reglas);
+    const neto = (r: any) => r.filas.reduce((a: number, f: any) => a + f['Total Neto'], 0);
+    const enCero = (r: any) => r.observadas.filter((o: any) => o.Detalle.startsWith('Medidas en cero')).length;
+    const completadas = new Set(con.ajustes.filter((a) => a.Regla.startsWith('R01 Sorter')).map((a) => a.OS)).size;
+    console.log(`  ${caso}: "Medidas en cero" ${enCero(sin)} -> ${enCero(con)} | OS completadas ${completadas} | neto ${neto(sin)} -> ${neto(con)}`);
+    if (enCero(sin) - enCero(con) !== completadas) { console.log('  ✗ las observaciones no bajan en lo completado'); fallas++; }
+  }
+  const r = procesar(leerCsv(readFileSync(join(dir, 'Clinical Market/O_S_SIN_FACTURAR_29OCT2026.csv'), 'utf8')), { ...erp, sorter }, reglas);
+  const os = r.filas.find((f) => f['O/S'] === '202085790')!;
+  const ok = os['KG.V'] === 13 && os.Largo === 31 && os.Ancho === 23 && os.Alto === 32
+    && r.ajustes.some((a) => a.OS === '202085790' && a.Regla === 'R01 Sorter (7 bultos)');
+  console.log(`  OS 202085790: KG.V ${os['KG.V']}, ${os.Largo}x${os.Ancho}x${os.Alto} ${ok ? '✓' : '✗'}`);
+  if (!ok) fallas++;
+  console.log(fallas ? 'SORTER FALLA' : 'SORTER OK');
+  process.exitCode = fallas ? 1 : 0;
+}

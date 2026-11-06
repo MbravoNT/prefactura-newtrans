@@ -91,7 +91,23 @@ Deno.serve(async (req) => {
     const reglas = await todo<Regla>((a, b) => db.from('reglas').select('*').eq('rut', rut)
       .in('estado', ['VIGENTE', 'PROPUESTA']).order('id').range(a, b));
 
+    // sorter: bultos de las OS del archivo (tabla acumulativa; si un bulto se cargó dos veces vale la carga más reciente)
+    const oss = [...new Set(base.map((r) => String(r['O/S'])))];
+    const bultos = new Map<string, Map<number, any>>();
+    for (let i = 0; i < oss.length; i += 200) {
+      const filas = await todo((a, b) => db.from('erp_sorter').select('carga_id, os, nbulto, largo, ancho, alto')
+        .in('os', oss.slice(i, i + 200)).order('os').order('nbulto').order('carga_id').range(a, b));
+      for (const f of filas as any[]) {
+        const m = bultos.get(f.os) ?? new Map();
+        if (!m.has(f.nbulto) || f.carga_id > m.get(f.nbulto).carga_id) m.set(f.nbulto, f);
+        bultos.set(f.os, m);
+      }
+    }
+    const sorter = new Map([...bultos].map(([os, m]) => [os, [...m.values()]
+      .map((f) => ({ largo: Number(f.largo), ancho: Number(f.ancho), alto: Number(f.alto) }))]));
+
     const erp: Erp = {
+      sorter,
       sucursales: sucursales as Erp['sucursales'],
       contratos: contratos as Erp['contratos'],
       tarifas: new Map(tarifas.map((t: any) => [`${t.convenio}|${t.servicio}|${t.via}|${t.origen}|${t.destino}`, t.tramos as Tramos])),

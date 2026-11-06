@@ -22,7 +22,9 @@ export interface Erp {
   servicios: Map<string, string>;      // nombre -> código 13xx
   ciudades: Map<string, string>;       // nombre -> código
   ejecutivos: Map<string, string>;     // rut -> ejecutivo del maestro
+  sorter?: Map<string, Bulto[]>;       // O/S -> bultos medidos en el sorter (opcional)
 }
+export interface Bulto { largo: number; ancho: number; alto: number }
 export interface Regla {
   codigo: string; rut: string; tipo: string; estado: string; servicio: string | null; via: string | null;
   desde: string | null; hasta: string | null; palabra: string | null; excluir: string | null;
@@ -174,12 +176,28 @@ export function calcular(base: Fila[], erp: Erp, reglas: Regla[]) {
         kgv = nuevo;
       }
     } else {
-      if ([r.Largo, r.Ancho, r.Alto].includes(0)) observa('R01 Medidas', 'Medidas en cero');
-      else if (Math.max(r.Largo, r.Ancho, r.Alto) > LADO_MAX_CM) {
-        observa('R01 Medidas', `Lado > ${LADO_MAX_CM} cm: ${f0(r.Largo)}x${f0(r.Ancho)}x${f0(r.Alto)}`);
+      const sorter = erp.sorter?.get(String(os));
+      const sinMedidas = [r.Largo, r.Ancho, r.Alto].includes(0);
+      if (sinMedidas && sorter && sorter.length >= r['Nro Piezas']) {
+        // R01 Sorter: medidas del bulto mayor y KG.V con la suma de todos los bultos (igual que el ERP)
+        const v = (b: Bulto) => b.largo * b.ancho * b.alto;
+        const mayor = sorter.reduce((a, b) => (v(b) > v(a) ? b : a));
+        const nuevo = Math.ceil(sorter.reduce((s, b) => s + v(b), 0) / FACTOR_VOL - 1e-9);
+        const regla = `R01 Sorter (${sorter.length} bultos)`;
+        ajuste('Largo', mayor.largo, regla);
+        ajuste('Ancho', mayor.ancho, regla);
+        ajuste('Alto', mayor.alto, regla);
+        ajuste('KG.V', nuevo, regla);
+        kgv = nuevo;
+      } else {
+        if (sinMedidas) {
+          observa('R01 Medidas', sorter ? `Medidas en cero; el sorter midió ${sorter.length} de ${r['Nro Piezas']} bultos` : 'Medidas en cero');
+        } else if (Math.max(r.Largo, r.Ancho, r.Alto) > LADO_MAX_CM) {
+          observa('R01 Medidas', `Lado > ${LADO_MAX_CM} cm: ${f0(r.Largo)}x${f0(r.Ancho)}x${f0(r.Alto)}`);
+        }
+        const calc = Math.ceil(r.Largo * r.Ancho * r.Alto / FACTOR_VOL - 1e-9);
+        if (calc !== kgv) observa('R01 KG.V', `KG.V ERP ${g6(kgv)} ≠ L×A×H/4000 = ${calc}; se respeta ERP`);
       }
-      const calc = Math.ceil(r.Largo * r.Ancho * r.Alto / FACTOR_VOL - 1e-9);
-      if (calc !== kgv) observa('R01 KG.V', `KG.V ERP ${g6(kgv)} ≠ L×A×H/4000 = ${calc}; se respeta ERP`);
     }
 
     const gp = rr.find((g) => g.tipo === 'PESO');
